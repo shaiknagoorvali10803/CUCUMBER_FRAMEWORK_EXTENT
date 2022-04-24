@@ -1,0 +1,161 @@
+package runner;
+
+import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeSuite;
+import org.testng.annotations.DataProvider;
+
+import cucumber.api.CucumberOptions;
+import cucumber.api.testng.AbstractTestNGCucumberTests;
+
+
+/  * Example-1 Ruuning without testNG.xml   */
+
+@CucumberOptions(
+		features="classpath:features",
+		glue="",
+		tags="",
+		plugin = {"pretty",
+	             "html:target/cucumber-reports/cucumber-pretty.html",
+	                "json:target/cucumber-reports/CucumberTestReport.json",
+	                "junit:target/cucumber-reports/report.xml",
+				"com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:",
+				"io.qameta.allure.cucumber4jvm.AllureCucumber4Jvm",
+				"timeline:test-output-thread/"
+		},
+		dryRun = false, monochrome = true)
+
+public class CucumbertestNGTest extends AbstractTestNGCucumberTests {
+	
+	@Override
+    @DataProvider(parallel = true)
+    public Object[][] scenarios() {
+        return super.scenarios();
+    }
+	
+	@BeforeSuite
+	public void beforeSuite() {
+		System.out.println("================ BEFORE SUITE ================");
+	}
+
+	@AfterSuite
+	public void afterSuite() {
+		System.out.println("================ AFTER SUITE ================");
+	}
+
+}
+
+
+/  * Example-2 Ruuning Using testNG.xml   */
+
+@CucumberOptions(
+       features="classpath:features",
+		glue="",
+		tags="",
+		plugin = {"pretty",
+	             "html:target/cucumber-reports/cucumber-pretty.html",
+	                "json:target/cucumber-reports/CucumberTestReport.json",
+	                "junit:target/cucumber-reports/report.xml",
+				"com.aventstack.extentreports.cucumber.adapter.ExtentCucumberAdapter:",
+				"io.qameta.allure.cucumber4jvm.AllureCucumber4Jvm",
+				"timeline:test-output-thread/"
+		},
+		dryRun = false, monochrome = true)
+)
+public class TestsRunner extends AbstractTestNGCucumberTests {
+    private static final Logger LOGGER = LogManager.getLogger(TestsRunner.class);
+
+    private List<String> tagsRequired = new ArrayList<>();
+    private List<String> tagsForbidden = Stream.of("@Ignore", "@SiteAdmin").collect(toList());
+
+    @Parameters({"xmlTagsRequired", "xmlTagsForbidden"})
+    @Test
+    public void setupTagsConfig(@Optional("") String xmlTagsRequired, @Optional("") String xmlTagsForbidden) {
+        tagsRequired.addAll(asList(split(xmlTagsRequired, ",")));
+        tagsForbidden.addAll(asList(split(xmlTagsForbidden, ",")));
+    }
+
+    @Test(dependsOnMethods = "setupTagsConfig", dataProvider = "scenarios", description = "Runs Cucumber Scenarios")
+    public void runScenario(PickleEventWrapper pickleWrapper, CucumberFeatureWrapper featureWrapper) throws Throwable {
+        super.runScenario(pickleWrapper, featureWrapper);
+    }
+
+    @Override
+    @DataProvider(parallel = true)
+    public Object[][] scenarios() {
+        Object[][] scenarios = stream(super.scenarios())
+                .filter(scenario -> acceptScenarioByTags(getTags(scenario[0]), tagsRequired, tagsForbidden))
+                .toArray(Object[][]::new);
+        LOGGER.info("scenariosCount: {}", scenarios.length);
+        return scenarios;
+    }
+
+    @AfterClass
+    public void saveSkippedTests() throws IOException {
+        ScenarioListener.saveSkippedTests();
+    }
+}
+
+
+/  * testNG.xml  */
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite annotations="JDK" name="Everest 2.0 test suite" parallel="tests" data-provider-thread-count="7">
+    <parameter name="xmlTagsRequired" value=""/>
+    <parameter name="xmlTagsForbidden" value="@IgnoreOnInt"/>
+    <test name="Tests without changes in Site Admin" parallel="none">
+        <classes>
+            <class name="com.sabre.qa.everest.runners.parallel.TestsRunner"/>
+            <class name="com.sabre.qa.everest.runners.parallel.TestsRunnerRetryFirst"/>
+            <class name="com.sabre.qa.everest.runners.parallel.TestsRunnerRetrySecond"/>
+        </classes>
+    </test>
+    <test name="Tests with changes in Site Admin" parallel="none">
+        <classes>
+            <class name="com.sabre.qa.everest.runners.singlethread.DelayManager"/>
+            <class name="com.sabre.qa.everest.runners.singlethread.TestsRunner"/>
+            <class name="com.sabre.qa.everest.runners.singlethread.TestsRunnerRetryFirst"/>
+            <class name="com.sabre.qa.everest.runners.singlethread.TestsRunnerRetrySecond"/>
+        </classes>
+    </test>
+</suite>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-testng</artifactId>
+			<version>${cucumber.version}</version>
+		</dependency>
+
+
+		<!-- https://mvnrepository.com/artifact/org.testng/testng -->
+		<dependency>
+			<groupId>org.testng</groupId>
+			<artifactId>testng</artifactId>
+			<version>7.3.0</version>
+		</dependency>
+
+
